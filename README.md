@@ -47,6 +47,9 @@ goGin/ # โฟลเดอร์หลักของโปรเจกต์
 6. go get github.com/go-redis/redis/v8 # ติดตั้ง Redis client ที่ใช้ในเวอร์ชัน 8
 7. go get github.com/joho/godotenv # ติดตั้งไลบรารีสำหรับโหลดค่าจากไฟล์ .env
 8. go get -u golang.org/x/crypto/bcrypt # ติดตั้งไลบรารีสำหรับตรวจสอบว่ารหัสผ่าน
+9. get github.com/ulule/limiter/v3 # ติดตั้ง rate limit
+10. go get github.com/ulule/limiter/v3/drivers/store/memory # ติดตั้ง rate limit
+11. go get github.com/gin-contrib/cors # ติดตั้ง cors
 
 # Delete Dependencies # วิธีลบ dependencies ที่ไม่ใช้งานออกจาก go.mod
 1. go mod tidy # ลบ dependencies ที่ไม่ได้ใช้ออกจากโปรเจกต์

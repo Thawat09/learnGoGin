@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	// นำเข้าชุดคำสั่งที่เกี่ยวกับเส้นทางสำหรับการจัดการ authentication
 	authRoutes "goGin/internal/auth/routes"
 	// นำเข้าชุดคำสั่งที่เกี่ยวข้องกับการเชื่อมต่อฐานข้อมูล
@@ -15,8 +18,11 @@ import (
 	// นำเข้าคำสั่งสำหรับการใช้งาน environment variables
 	"os"
 
-	"github.com/gin-gonic/gin" // นำเข้าคลาส gin สำหรับสร้าง HTTP server
-	"github.com/joho/godotenv" // นำเข้าคลาส godotenv สำหรับโหลดค่า environment variables จากไฟล์ .env
+	"github.com/gin-contrib/cors" // นำเข้า CORS middleware
+	"github.com/gin-gonic/gin"    // นำเข้าคลาส gin สำหรับสร้าง HTTP server
+	"github.com/joho/godotenv"    // นำเข้าคลาส godotenv สำหรับโหลดค่า environment variables จากไฟล์ .env
+	"github.com/ulule/limiter/v3"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
 func main() {
@@ -29,6 +35,72 @@ func main() {
 
 	// กำหนดโหมดการทำงานของ Gin จากค่า GIN_MODE ในไฟล์ .env
 	gin.SetMode(os.Getenv("GIN_MODE"))
+
+	// สร้าง store สำหรับจำข้อมูลการจำกัด
+	store := memory.NewStore()
+
+	// กำหนด rate limit (เช่น 100 requests ต่อ 1 นาที)
+	rate := limiter.Rate{
+		Limit:  5,           // จำนวนคำขอสูงสุด
+		Period: time.Minute, // ช่วงเวลาสำหรับจำนวนคำขอ
+	}
+
+	// สร้าง limiter จาก store และ rate ที่กำหนด
+	instance := limiter.New(store, rate)
+
+	// สร้าง Gin router ใหม่
+	r := gin.New()
+	// ใช้ middleware สำหรับการบันทึกข้อมูลการเข้าถึง server
+	r.Use(gin.Logger())
+	// ใช้ middleware สำหรับการจัดการกับ recovery เมื่อเกิดข้อผิดพลาดใน HTTP requests
+	r.Use(gin.Recovery())
+	// ใช้ middleware สำหรับบันทึก log ที่กำหนดเอง (เช่น log การเข้าถึง API หรือข้อผิดพลาดต่างๆ)
+	r.Use(middleware.LoggingMiddleware())
+
+	// ใช้ CORS middleware
+	corsOptions := cors.Config{
+		AllowOrigins: []string{
+			"http://4.156.59.104",
+			"http://localhost",
+			"http://localhost:8081",
+			"http://192.10.51.7",
+			"http://192.10.51.7:8081",
+			"http://frontend.thawat.site",
+			"https://frontend.thawat.site",
+		},
+		AllowCredentials: true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{
+			"Content-Type", "Authorization", "Accept", "X-Requested-With", "Cache-Control",
+			"X-CSRF-Token", "X-User-IP", "UserAgent", "UserIP", "UserOS", "Token", "HostName",
+			"City", "Region", "Country", "Loc", "Org", "Postal", "Timezone",
+		},
+	}
+
+	r.Use(cors.New(corsOptions))
+
+	// Middleware สำหรับการจัดการ Rate Limiting
+	r.Use(func(c *gin.Context) {
+		ip := c.ClientIP()
+
+		// เช็คว่า IP นี้สามารถเข้าถึง API ได้หรือไม่
+		context := c.Request.Context()                 // สร้าง context จาก HTTP request
+		limitContext, err := instance.Get(context, ip) // ใช้ context ที่ถูกต้อง
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+			c.Abort()
+			return
+		}
+
+		// ถ้า request เกิน limit
+		if limitContext.Reached {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	})
 
 	// เชื่อมต่อกับ SQL Server โดยใช้ค่าที่ได้จากไฟล์ .env
 	sqlServer, err := database.ConnectSQLServer(
@@ -64,15 +136,6 @@ func main() {
 	}
 	// เมื่อโปรแกรมทำงานเสร็จให้ปิดการเชื่อมต่อกับ Redis
 	defer redis.Close()
-
-	// สร้าง Gin router ใหม่
-	r := gin.New()
-	// ใช้ middleware สำหรับการบันทึกข้อมูลการเข้าถึง server
-	r.Use(gin.Logger())
-	// ใช้ middleware สำหรับการจัดการกับ recovery เมื่อเกิดข้อผิดพลาดใน HTTP requests
-	r.Use(gin.Recovery())
-	// ใช้ middleware สำหรับบันทึก log ที่กำหนดเอง (เช่น log การเข้าถึง API หรือข้อผิดพลาดต่างๆ)
-	r.Use(middleware.LoggingMiddleware())
 
 	// ลงทะเบียนเส้นทางของ Auth
 	authRoutes.RegisterAuthRoutes(r)
