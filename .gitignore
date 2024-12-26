@@ -1,0 +1,29 @@
+# Go binary files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+/bin/
+/obj/
+
+# Vendor directory (ถ้าใช้ Go Modules)
+vendor/
+
+# IDE/Editor files (เช่น VSCode, GoLand)
+.vscode/
+.idea/
+
+# Go test binary
+*.test
+
+# Log files
+*.log
+
+# Coverage report files
+*.out
+
+# Environment variables file
+.env
