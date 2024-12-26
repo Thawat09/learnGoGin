@@ -21,15 +21,14 @@ goGin/ # โฟลเดอร์หลักของโปรเจกต์
 │ │ └── model/ # แพ็กเกจที่เก็บโครงสร้างของข้อมูล (model)
 │ │ └── user.go # โมเดลของผู้ใช้ที่เกี่ยวข้องกับการยืนยันตัวตน
 │ │
-│ ├── user/ # แพ็กเกจที่จัดการข้อมูลของผู้ใช้
+│ ├── static/ # แพ็กเกจที่จัดการข้อมูลของผู้ใช้
 │ │ ├── handler/ # โฟลเดอร์สำหรับจัดการกับ HTTP request และ response สำหรับข้อมูลผู้ใช้
 │ │ │ └── handler.go # ไฟล์ที่จัดการกับ request สำหรับการดึงข้อมูลหรืออัปเดตข้อมูลผู้ใช้
 │ │ ├── service/ # แพ็กเกจที่เก็บ logic ต่างๆ เช่น การดึงข้อมูลผู้ใช้
-│ │ │ └── user_service.go # ฟังก์ชันที่เกี่ยวข้องกับ logic การจัดการข้อมูลผู้ใช้
+│ │ │ └── static_service.go # ฟังก์ชันที่เกี่ยวข้องกับ logic การจัดการข้อมูลผู้ใช้
 │ │ ├── repository/ # แพ็กเกจที่จัดการข้อมูลในฐานข้อมูล
-│ │ │ └── user_repository.go # จัดการข้อมูลของผู้ใช้ในฐานข้อมูล
+│ │ │ └── static_repository.go # จัดการข้อมูลของผู้ใช้ในฐานข้อมูล
 │ │ └── model/ # แพ็กเกจที่เก็บโครงสร้างของข้อมูล (model)
-│ │ └── user.go # โมเดลของผู้ใช้
 │ │
 │ └── middleware/ # แพ็กเกจที่เก็บ middleware ที่ใช้ในการจัดการการทำงานของเซิร์ฟเวอร์
 │ ├── auth_middleware.go # Middleware สำหรับตรวจสอบการเข้าถึง API เช่น การตรวจสอบ token
@@ -47,6 +46,7 @@ goGin/ # โฟลเดอร์หลักของโปรเจกต์
 5. go get github.com/denisenkom/go-mssqldb # ติดตั้ง driver สำหรับการเชื่อมต่อ SQL Server จาก Go
 6. go get github.com/go-redis/redis/v8 # ติดตั้ง Redis client ที่ใช้ในเวอร์ชัน 8
 7. go get github.com/joho/godotenv # ติดตั้งไลบรารีสำหรับโหลดค่าจากไฟล์ .env
+8. go get -u golang.org/x/crypto/bcrypt # ติดตั้งไลบรารีสำหรับตรวจสอบว่ารหัสผ่าน
 
 # Delete Dependencies # วิธีลบ dependencies ที่ไม่ใช้งานออกจาก go.mod
 1. go mod tidy # ลบ dependencies ที่ไม่ได้ใช้ออกจากโปรเจกต์

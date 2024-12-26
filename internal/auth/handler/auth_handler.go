@@ -35,10 +35,12 @@ func Login(c *gin.Context) {
 
 // ฟังก์ชัน Register รับค่าจากการร้องขอ HTTP เพื่อสมัครสมาชิกใหม่
 func Register(c *gin.Context) {
-	// กำหนดโครงสร้างของข้อมูลที่ต้องการรับจากผู้ใช้ (username และ password)
+	// กำหนดโครงสร้างของข้อมูลที่ต้องการรับจากผู้ใช้ (username, password และ departmentId)
 	var userReq struct {
-		Username string `json:"username"` // รับค่าชื่อผู้ใช้
-		Password string `json:"password"` // รับค่ารหัสผ่าน
+		Username     string `json:"username"`     // รับค่าชื่อผู้ใช้
+		Password     string `json:"password"`     // รับค่ารหัสผ่าน
+		Email        string `json:"email"`        // รับค่าอีเมล
+		DepartmentId int    `json:"departmentId"` // รับค่า DepartmentId
 	}
 
 	// ตรวจสอบว่าผู้ใช้ส่งข้อมูลในรูปแบบ JSON และเชื่อมต่อข้อมูลกับตัวแปร userReq หรือไม่
@@ -48,8 +50,14 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	// ตรวจสอบว่า Username, Email, และ Password ไม่เป็นค่าว่าง
+	if userReq.Username == "" || userReq.Email == "" || userReq.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username, email, and password must not be empty"})
+		return
+	}
+
 	// สมัครสมาชิกใหม่ โดยการเรียกใช้ฟังก์ชัน Register จาก service
-	if err := service.Register(userReq.Username, userReq.Password); err != nil {
+	if err := service.Register(userReq.Username, userReq.Password, userReq.Email, userReq.DepartmentId); err != nil {
 		// ถ้าเกิดข้อผิดพลาดในการสมัครสมาชิก ให้ส่งกลับ error message ด้วยรหัสสถานะ 500
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register"})
 		return
