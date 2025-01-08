@@ -5,21 +5,32 @@ import (
 	"crypto/cipher"
 	"crypto/sha256"
 	"encoding/base64"
-	"errors" // นำเข้าแพ็กเกจ errors สำหรับการสร้าง error messages
-	"fmt"
+	"errors"                         // นำเข้าแพ็กเกจ errors สำหรับการสร้าง error messages
 	"goGin/internal/auth/model"      // นำเข้าแพ็กเกจ model เพื่อใช้ประเภทข้อมูล Users
 	"goGin/internal/auth/repository" // นำเข้าแพ็กเกจ repository ซึ่งจะเชื่อมต่อกับฐานข้อมูลเพื่อจัดการข้อมูลผู้ใช้
 	"goGin/internal/database"
 	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt" // นำเข้า bcrypt เพื่อใช้ในการตรวจสอบรหัสผ่านที่เข้ารหัสแล้ว
 )
 
+type Claims struct {
+	UserId         int    `json:"userId"`
+	Username       string `json:"username"`
+	Email          string `json:"email"`
+	FirstName      string `json:"firstName"`
+	LastName       string `json:"lastName"`
+	RoleId         int    `json:"roleId"`
+	RoleName       string `json:"roleName"`
+	DepartmentId   int    `json:"departmentId"`
+	DepartmentName string `json:"departmentName"`
+	jwt.RegisteredClaims
+}
+
 // ฟังก์ชัน Login ใช้ในการตรวจสอบการเข้าสู่ระบบโดยใช้ชื่อผู้ใช้และรหัสผ่าน
 func Login(username, password string) error {
-	fmt.Println("username: ", username)
-	fmt.Println("password: ", password)
 	// หา user ใน repository โดยใช้ชื่อผู้ใช้ที่ส่งมา
 	user, err := repository.FindUserByUsername(username)
 	if err != nil {
@@ -149,4 +160,51 @@ func Decrypt(encodedMessage string) (string, error) {
 	}
 
 	return string(plaintext), nil
+}
+
+func CreateAccessToken(user *Claims) (string, error) {
+	// ดึงค่า Secret Key สำหรับ Access Token จาก environment variables
+	secretKey := os.Getenv("SECRETTOKENKEY")
+	if secretKey == "" {
+		return "", errors.New("missing SECRETTOKENKEY in environment variables")
+	}
+
+	// สร้าง token พร้อม claims ที่ต้องการ
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
+		UserId:         user.UserId,
+		Username:       user.Username,
+		Email:          user.Email,
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		RoleId:         user.RoleId,
+		RoleName:       user.RoleName,
+		DepartmentId:   user.DepartmentId,
+		DepartmentName: user.DepartmentName,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)), // กำหนดเวลาหมดอายุ 30 นาที
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                       // เวลาที่ token ถูกสร้าง
+		},
+	})
+
+	// เซ็น token ด้วย Secret Key
+	return token.SignedString([]byte(secretKey))
+}
+
+func CreateRefreshToken(user *Claims) (string, error) {
+	// ดึงค่า Secret Key สำหรับ Refresh Token จาก environment variables
+	secretKey := os.Getenv("SECRETREFRESHTOKENKEY")
+	if secretKey == "" {
+		return "", errors.New("missing SECRETREFRESHTOKENKEY in environment variables")
+	}
+
+	// สร้าง token พร้อม claims ที่ต้องการ
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"userId":   user.UserId,
+		"username": user.Username,
+		"email":    user.Email,
+		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(), // กำหนดเวลาหมดอายุ 7 วัน
+	})
+
+	// เซ็น token ด้วย Secret Key
+	return token.SignedString([]byte(secretKey))
 }

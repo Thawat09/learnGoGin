@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"goGin/internal/auth/service" // นำเข้าชุดฟังก์ชันที่เกี่ยวกับการตรวจสอบและลงทะเบียนผู้ใช้
 	"net/http"                    // ใช้สำหรับการกำหนดสถานะ HTTP เช่น 200, 400, 401 เป็นต้น
 
@@ -23,10 +22,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("data: ", loginReq)
-	fmt.Println("username: ", loginReq.Username)
-	fmt.Println("password: ", loginReq.Password)
-
 	// ถอดรหัส Username
 	decryptedUsername, err := service.Decrypt(loginReq.Username)
 	if err != nil {
@@ -42,14 +37,39 @@ func Login(c *gin.Context) {
 	}
 
 	// ตรวจสอบชื่อผู้ใช้และรหัสผ่านโดยการเรียกใช้ฟังก์ชัน Login จาก service
-	if err := service.Login(decryptedUsername, decryptedPassword); err != nil {
+	err = service.Login(decryptedUsername, decryptedPassword)
+	if err != nil {
 		// ถ้าเกิดข้อผิดพลาดในการตรวจสอบข้อมูลผู้ใช้ ให้ส่งกลับ error message ด้วยรหัสสถานะ 401
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
+	// สร้าง Claims สำหรับการสร้าง Token
+	userClaims := &service.Claims{
+		Username: decryptedUsername,
+		Email:    loginReq.Username, // ใช้ Username เป็น Email ตัวอย่างนี้
+		// กำหนดข้อมูลเพิ่มเติมจากที่คุณต้องการ
+	}
+
+	// สร้าง Access Token และ Refresh Token
+	accessToken, err := service.CreateAccessToken(userClaims)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+		return
+	}
+
+	refreshToken, err := service.CreateRefreshToken(userClaims)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
+		return
+	}
+
 	// ถ้าผ่านการตรวจสอบ ให้ส่งกลับข้อความว่าเข้าสู่ระบบสำเร็จ พร้อมกับรหัสสถานะ 200
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful"})
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "Login successful",
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	})
 }
 
 // ฟังก์ชัน Register รับค่าจากการร้องขอ HTTP เพื่อสมัครสมาชิกใหม่
