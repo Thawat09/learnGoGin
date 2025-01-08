@@ -5,6 +5,7 @@ import (
 	"goGin/internal/auth/model"
 	"goGin/internal/database"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -39,5 +40,41 @@ func SaveUser(user model.Users) error {
 		}
 		return err
 	}
+	return nil
+}
+
+func UpdateLastLogin(username string) error {
+	location, _ := time.LoadLocation("Asia/Bangkok")
+	now := time.Now().In(location)
+
+	result := database.DB.Model(&model.Users{}).
+		Where("username = ?", username).
+		Update("LastLogin", now)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("user not found or no update occurred")
+	}
+
+	return nil
+}
+
+func LogLoginHistory(userId int, ipAddress string) error {
+	location, _ := time.LoadLocation("Asia/Bangkok")
+	now := time.Now().In(location)
+
+	loginHistory := model.LoginHistory{
+		UserId:    userId,
+		IPAddress: ipAddress,
+		LoginTime: now,
+	}
+
+	if err := database.DB.Create(&loginHistory).Error; err != nil {
+		return err
+	}
+
 	return nil
 }

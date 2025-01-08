@@ -29,7 +29,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func Login(username, password string) error {
+func Login(username, password string, ipAddress string) error {
 	user, err := repository.FindUserByUsername(username)
 
 	if err != nil {
@@ -40,6 +40,14 @@ func Login(username, password string) error {
 
 	if err != nil {
 		return errors.New("invalid credentials")
+	}
+
+	if err := repository.UpdateLastLogin(username); err != nil {
+		return err
+	}
+
+	if err := repository.LogLoginHistory(user.UserID, ipAddress); err != nil {
+		return err
 	}
 
 	return nil
@@ -70,7 +78,8 @@ func Register(username, password, email string, departmentId int) error {
 		return err
 	}
 
-	now := time.Now().UTC()
+	location, _ := time.LoadLocation("Asia/Bangkok")
+	now := time.Now().In(location)
 
 	return repository.SaveUser(model.Users{
 		Username:     username,

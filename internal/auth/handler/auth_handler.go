@@ -32,7 +32,13 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	err = service.Login(decryptedUsername, decryptedPassword)
+	ipAddress := c.ClientIP()
+
+	if ipAddress == "::1" || ipAddress == "" {
+		ipAddress = "localhost"
+	}
+
+	err = service.Login(decryptedUsername, decryptedPassword, ipAddress)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
