@@ -1,10 +1,16 @@
 package service // กำหนดชื่อแพ็กเกจเป็น "service" ซึ่งจะมีฟังก์ชันที่เกี่ยวข้องกับการทำงานหลัก เช่น การเข้าสู่ระบบ และการลงทะเบียน
 
 import (
-	"errors"                         // นำเข้าแพ็กเกจ errors สำหรับการสร้าง error messages
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
+	"encoding/base64"
+	"errors" // นำเข้าแพ็กเกจ errors สำหรับการสร้าง error messages
+	"fmt"
 	"goGin/internal/auth/model"      // นำเข้าแพ็กเกจ model เพื่อใช้ประเภทข้อมูล Users
 	"goGin/internal/auth/repository" // นำเข้าแพ็กเกจ repository ซึ่งจะเชื่อมต่อกับฐานข้อมูลเพื่อจัดการข้อมูลผู้ใช้
 	"goGin/internal/database"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt" // นำเข้า bcrypt เพื่อใช้ในการตรวจสอบรหัสผ่านที่เข้ารหัสแล้ว
@@ -12,6 +18,8 @@ import (
 
 // ฟังก์ชัน Login ใช้ในการตรวจสอบการเข้าสู่ระบบโดยใช้ชื่อผู้ใช้และรหัสผ่าน
 func Login(username, password string) error {
+	fmt.Println("username: ", username)
+	fmt.Println("password: ", password)
 	// หา user ใน repository โดยใช้ชื่อผู้ใช้ที่ส่งมา
 	user, err := repository.FindUserByUsername(username)
 	if err != nil {
@@ -67,4 +75,78 @@ func Register(username, password, email string, departmentId int) error {
 		UpdatedAt:    now,          // ใช้เวลาใน UTC
 		LastLogin:    now,          // กำหนดค่า LastLogin เป็นเวลาปัจจุบัน
 	})
+}
+
+// ฟังก์ชันแปลงข้อความด้วย AES โดยใช้ SECRETKEYDATA จาก environment variables
+func Encrypt(message string) (string, error) {
+	// ดึงค่า SECRETKEYDATA จาก environment variables
+	secretKey := os.Getenv("SECRETKEYDATA")
+	if secretKey == "" {
+		return "", errors.New("missing SECRETKEYDATA in environment variables")
+	}
+
+	// ใช้ SHA256 เพื่อให้แน่ใจว่า secretKey มีขนาดที่เหมาะสม
+	hash := sha256.Sum256([]byte(secretKey))
+
+	// สร้าง block cipher ด้วย AES
+	block, err := aes.NewCipher(hash[:])
+	if err != nil {
+		return "", err
+	}
+
+	// สร้าง IV (Initialization Vector) สำหรับการเข้ารหัส
+	iv := []byte("123456789012") // คุณอาจใช้ค่า IV แบบคงที่หรือสุ่มขึ้นมา (ควรสุ่มในกรณีใช้งานจริง)
+
+	// สร้าง GCM (Galois/Counter Mode) สำหรับ AES
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	// เข้ารหัสข้อความ
+	ciphertext := gcm.Seal(nil, iv, []byte(message), nil)
+
+	// เข้ารหัสข้อความเป็น base64 เพื่อให้ง่ายต่อการส่งใน JSON
+	encoded := base64.StdEncoding.EncodeToString(ciphertext)
+
+	return encoded, nil
+}
+
+func Decrypt(encodedMessage string) (string, error) {
+	secretKey := os.Getenv("SECRETKEYDATA")
+	if secretKey == "" {
+		return "", errors.New("missing SECRETKEYDATA in environment variables")
+	}
+
+	hash := sha256.Sum256([]byte(secretKey))
+
+	block, err := aes.NewCipher(hash[:])
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	// Decode base64-encoded message
+	ciphertext, err := base64.StdEncoding.DecodeString(encodedMessage)
+	if err != nil {
+		return "", err
+	}
+
+	// Use the same IV (must match the one used during encryption)
+	iv := []byte("123456789012")
+	if len(ciphertext) < len(iv) {
+		return "", errors.New("ciphertext too short")
+	}
+
+	// Decrypt the message
+	plaintext, err := gcm.Open(nil, iv, ciphertext, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return string(plaintext), nil
 }

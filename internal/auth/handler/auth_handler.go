@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"goGin/internal/auth/service" // นำเข้าชุดฟังก์ชันที่เกี่ยวกับการตรวจสอบและลงทะเบียนผู้ใช้
 	"net/http"                    // ใช้สำหรับการกำหนดสถานะ HTTP เช่น 200, 400, 401 เป็นต้น
 
@@ -22,8 +23,26 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("data: ", loginReq)
+	fmt.Println("username: ", loginReq.Username)
+	fmt.Println("password: ", loginReq.Password)
+
+	// ถอดรหัส Username
+	decryptedUsername, err := service.Decrypt(loginReq.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt username"})
+		return
+	}
+
+	// ถอดรหัส Password
+	decryptedPassword, err := service.Decrypt(loginReq.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt password"})
+		return
+	}
+
 	// ตรวจสอบชื่อผู้ใช้และรหัสผ่านโดยการเรียกใช้ฟังก์ชัน Login จาก service
-	if err := service.Login(loginReq.Username, loginReq.Password); err != nil {
+	if err := service.Login(decryptedUsername, decryptedPassword); err != nil {
 		// ถ้าเกิดข้อผิดพลาดในการตรวจสอบข้อมูลผู้ใช้ ให้ส่งกลับ error message ด้วยรหัสสถานะ 401
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
@@ -65,4 +84,34 @@ func Register(c *gin.Context) {
 
 	// ถ้าการสมัครสมาชิกสำเร็จ ให้ส่งกลับข้อความว่าสมัครสมาชิกสำเร็จ พร้อมกับรหัสสถานะ 200
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
+}
+
+func EncryptMessage(c *gin.Context) {
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// ทำการเข้ารหัสข้อความ
+	encryptedUsername, err := service.Encrypt(req.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt message"})
+		return
+	}
+
+	encryptedPassword, err := service.Encrypt(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt message"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"encryptedUsername": encryptedUsername,
+		"encryptedPassword": encryptedPassword,
+	})
 }

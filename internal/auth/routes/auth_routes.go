@@ -11,7 +11,8 @@ func RegisterAuthRoutes(r *gin.Engine) {
 	auth := r.Group("/auth") // สร้างกลุ่มเส้นทาง (route group) ที่มีพาธเริ่มต้นเป็น "/auth"
 	// ไม่จำเป็นต้องใช้ AuthMiddleware ที่นี่ เพราะ login และ register เป็น public
 	{
-		auth.POST("/login", handler.Login)       // ลงทะเบียนเส้นทาง POST "/auth/login" ให้เรียกใช้ฟังก์ชัน Login ใน handler
-		auth.POST("/register", handler.Register) // ลงทะเบียนเส้นทาง POST "/auth/register" ให้เรียกใช้ฟังก์ชัน Register ใน handler
+		auth.POST("/login", handler.Login)            // ลงทะเบียนเส้นทาง POST "/auth/login" ให้เรียกใช้ฟังก์ชัน Login ใน handler
+		auth.POST("/register", handler.Register)      // ลงทะเบียนเส้นทาง POST "/auth/register" ให้เรียกใช้ฟังก์ชัน Register ใน handler
+		auth.POST("/encrypt", handler.EncryptMessage) // route สำหรับการเข้ารหัสข้อความ
 	}
 }
