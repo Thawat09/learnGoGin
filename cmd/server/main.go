@@ -89,6 +89,8 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Failed to connect to SQL Server: %v", err)
+	} else {
+		fmt.Println("SQL Server connected successfully")
 	}
 
 	defer func() {
@@ -109,6 +111,8 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
+	} else {
+		fmt.Println("Redis connected successfully")
 	}
 
 	defer redis.Close()

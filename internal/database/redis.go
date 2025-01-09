@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 var ctx = context.Background()
@@ -21,8 +21,6 @@ func ConnectRedis(host, port string) (*redis.Client, error) {
 		log.Printf("Redis connection error: %v", err)
 		return nil, err
 	}
-
-	log.Println("Redis connected successfully")
 
 	return rdb, nil
 }

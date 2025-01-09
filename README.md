@@ -44,7 +44,7 @@ goGin/ # โฟลเดอร์หลักของโปรเจกต์
 3. go get gorm.io/gorm # ติดตั้ง GORM ORM เพื่อใช้งานกับฐานข้อมูล
 4. go get gorm.io/driver/sqlserver # ติดตั้ง driver สำหรับการเชื่อมต่อกับฐานข้อมูล SQL Server
 5. go get github.com/denisenkom/go-mssqldb # ติดตั้ง driver สำหรับการเชื่อมต่อ SQL Server จาก Go
-6. go get github.com/go-redis/redis/v8 # ติดตั้ง Redis client ที่ใช้ในเวอร์ชัน 8
+6. go get github.com/redis/go-redis/v9 # ติดตั้ง Redis client ที่ใช้ในเวอร์ชัน 8
 7. go get github.com/joho/godotenv # ติดตั้งไลบรารีสำหรับโหลดค่าจากไฟล์ .env
 8. go get -u golang.org/x/crypto/bcrypt # ติดตั้งไลบรารีสำหรับตรวจสอบว่ารหัสผ่าน
 9. get github.com/ulule/limiter/v3 # ติดตั้ง rate limit
