@@ -20,7 +20,10 @@ func AuthMiddleware() gin.HandlerFunc {
 		token := c.GetHeader("Authorization")
 
 		if token != "valid-token" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":  "Unauthorized",
+				"status": http.StatusUnauthorized,
+			})
 			c.Abort()
 			return
 		}

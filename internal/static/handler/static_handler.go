@@ -12,9 +12,15 @@ func GetUser(c *gin.Context) {
 	user, err := service.GetUserByID(userID)
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":  "User not found",
+			"status": http.StatusNotFound,
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, gin.H{
+		"user":   user,
+		"status": http.StatusOK,
+	})
 }

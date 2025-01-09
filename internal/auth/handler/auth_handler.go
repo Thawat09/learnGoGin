@@ -2,11 +2,11 @@ package handler
 
 import (
 	// "encoding/json"
-	"fmt"
 	"goGin/internal/auth/service"
 	"goGin/internal/database"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,19 +19,28 @@ func Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "Invalid input",
+			"status": http.StatusBadRequest,
+		})
 		return
 	}
 
 	decryptedUsername, err := service.Decrypt(loginReq.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt username"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to decrypt username",
+			"status": http.StatusInternalServerError,
+		})
 		return
 	}
 
 	decryptedPassword, err := service.Decrypt(loginReq.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt password"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to decrypt password",
+			"status": http.StatusInternalServerError,
+		})
 		return
 	}
 
@@ -42,7 +51,10 @@ func Login(c *gin.Context) {
 
 	user, err := service.Login(decryptedUsername, decryptedPassword, ipAddress)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":  "Invalid credentials",
+			"status": http.StatusUnauthorized,
+		})
 		return
 	}
 
@@ -68,13 +80,19 @@ func Login(c *gin.Context) {
 
 	accessToken, err := service.CreateAccessToken(userClaims)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to generate access token",
+			"status": http.StatusInternalServerError,
+		})
 		return
 	}
 
 	refreshToken, err := service.CreateRefreshToken(userClaims)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to generate refresh token",
+			"status": http.StatusInternalServerError,
+		})
 		return
 	}
 
@@ -82,22 +100,34 @@ func Login(c *gin.Context) {
 	redisClient := database.GetRedisClient()
 
 	go func() {
-		err := database.SetValue(redisClient, fmt.Sprintf("accessToken:%d", userId), accessToken, time.Hour)
+		key := "accessToken:" + strconv.Itoa(userId)
+		err := database.SetValue(redisClient, key, accessToken, time.Hour)
 		if err != nil {
 			log.Println("Failed to save accessToken to Redis:", err)
 		}
 	}()
 
 	go func() {
-		err := database.SetValue(redisClient, fmt.Sprintf("refreshToken:%d", userId), refreshToken, 10*time.Hour)
+		key := "refreshToken:" + strconv.Itoa(userId)
+		err := database.SetValue(redisClient, key, refreshToken, 10*time.Hour)
 		if err != nil {
 			log.Println("Failed to save refreshToken to Redis:", err)
 		}
 	}()
 
+	encryptedAccessToken, err := service.Encrypt(accessToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to encrypt access token",
+			"status": http.StatusInternalServerError,
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":     "Login successful",
-		"accessToken": accessToken,
+		"accessToken": encryptedAccessToken,
+		"status":      http.StatusOK,
 	})
 }
 
@@ -110,21 +140,33 @@ func Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&userReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "Invalid input",
+			"status": http.StatusBadRequest,
+		})
 		return
 	}
 
 	if userReq.Username == "" || userReq.Email == "" || userReq.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Username, email, and password must not be empty"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "Username, email, and password must not be empty",
+			"status": http.StatusBadRequest,
+		})
 		return
 	}
 
 	if err := service.Register(userReq.Username, userReq.Password, userReq.Email, userReq.DepartmentId); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to register",
+			"status": http.StatusInternalServerError,
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User registered successfully",
+		"status":  http.StatusOK,
+	})
 }
 
 func EncryptMessage(c *gin.Context) {
@@ -134,26 +176,36 @@ func EncryptMessage(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "Invalid input",
+			"status": http.StatusBadRequest,
+		})
 		return
 	}
 
 	encryptedUsername, err := service.Encrypt(req.Username)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt message"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to encrypt username",
+			"status": http.StatusInternalServerError,
+		})
 		return
 	}
 
 	encryptedPassword, err := service.Encrypt(req.Password)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt message"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to encrypt password",
+			"status": http.StatusInternalServerError,
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"encryptedUsername": encryptedUsername,
 		"encryptedPassword": encryptedPassword,
+		"status":            http.StatusOK,
 	})
 }

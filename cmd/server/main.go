@@ -28,7 +28,7 @@ func main() {
 
 	store := memory.NewStore()
 	rate := limiter.Rate{
-		Limit:  5,
+		Limit:  30,
 		Period: time.Minute,
 	}
 	instance := limiter.New(store, rate)
@@ -64,13 +64,19 @@ func main() {
 		limitContext, err := instance.Get(context, ip)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":  "Internal Server Error",
+				"status": http.StatusInternalServerError,
+			})
 			c.Abort()
 			return
 		}
 
 		if limitContext.Reached {
-			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests"})
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":  "Too many requests",
+				"status": http.StatusTooManyRequests,
+			})
 			c.Abort()
 			return
 		}
@@ -116,7 +122,6 @@ func main() {
 		port = "8080"
 	}
 
-	// Start the server
 	fmt.Printf("Server is running on http://localhost:%s\n", port)
 	r.Run(":" + port)
 }
