@@ -6,9 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"goGin/internal/auth/model"
 	"goGin/internal/auth/repository"
 	"goGin/internal/database"
+	"goGin/internal/model"
+	"log"
 	"os"
 	"time"
 
@@ -29,28 +30,47 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func Login(username, password string, ipAddress string) error {
+func Login(username, password string, ipAddress string) (*Claims, error) {
 	user, err := repository.FindUserByUsername(username)
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-
 	if err != nil {
-		return errors.New("invalid credentials")
+		return nil, errors.New("invalid credentials")
 	}
 
-	if err := repository.UpdateLastLogin(username); err != nil {
-		return err
+	go func() {
+		if err := repository.UpdateLastLogin(username); err != nil {
+			log.Println("Failed to update last login:", err)
+		}
+		if err := repository.LogLoginHistory(user.UserID, ipAddress); err != nil {
+			log.Println("Failed to log login history:", err)
+		}
+	}()
+
+	var roleName string
+	var roleId int
+	if len(user.UserRoles) > 0 {
+		roleName = user.UserRoles[0].Role.RoleName
+		roleId = user.UserRoles[0].RoleId
+	}
+	departmentName := user.Department.DepartmentName
+
+	data := &Claims{
+		UserId:         user.UserID,
+		Username:       user.Username,
+		Email:          user.Email,
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		RoleId:         roleId,
+		RoleName:       roleName,
+		DepartmentId:   user.DepartmentID,
+		DepartmentName: departmentName,
 	}
 
-	if err := repository.LogLoginHistory(user.UserID, ipAddress); err != nil {
-		return err
-	}
-
-	return nil
+	return data, nil
 }
 
 func Register(username, password, email string, departmentId int) error {
@@ -177,10 +197,6 @@ func CreateAccessToken(user *Claims) (string, error) {
 		RoleName:       user.RoleName,
 		DepartmentId:   user.DepartmentId,
 		DepartmentName: user.DepartmentName,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
 	})
 
 	return token.SignedString([]byte(secretKey))

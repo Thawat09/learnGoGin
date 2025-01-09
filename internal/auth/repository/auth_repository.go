@@ -2,8 +2,8 @@ package repository
 
 import (
 	"errors"
-	"goGin/internal/auth/model"
 	"goGin/internal/database"
+	"goGin/internal/model"
 	"strings"
 	"time"
 
@@ -12,7 +12,14 @@ import (
 
 func FindUserByUsername(username string) (model.Users, error) {
 	var user model.Users
-	err := database.DB.Where("username = ?", username).First(&user).Error
+
+	err := database.DB.
+		Where("username = ?", username).
+		Where("status = ?", "Active").
+		Joins("JOIN Departments ON Departments.DepartmentId = Users.DepartmentId").
+		Joins("JOIN UserRoles ON UserRoles.UserId = Users.UserId").
+		Preload("UserRoles.Role").
+		First(&user).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -47,9 +54,7 @@ func UpdateLastLogin(username string) error {
 	location, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now().In(location)
 
-	result := database.DB.Model(&model.Users{}).
-		Where("username = ?", username).
-		Update("LastLogin", now)
+	result := database.DB.Exec("UPDATE Users SET LastLogin = ? WHERE username = ?", now, username)
 
 	if result.Error != nil {
 		return result.Error
@@ -66,14 +71,10 @@ func LogLoginHistory(userId int, ipAddress string) error {
 	location, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now().In(location)
 
-	loginHistory := model.LoginHistory{
-		UserId:    userId,
-		IPAddress: ipAddress,
-		LoginTime: now,
-	}
+	result := database.DB.Exec("INSERT INTO LoginHistory (UserId, IPAddress, LoginTime) VALUES (?, ?, ?)", userId, ipAddress, now)
 
-	if err := database.DB.Create(&loginHistory).Error; err != nil {
-		return err
+	if result.Error != nil {
+		return result.Error
 	}
 
 	return nil

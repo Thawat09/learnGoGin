@@ -15,6 +15,9 @@ type Users struct {
 	LastLogin    time.Time `gorm:"column:LastLogin;not null"`
 	CreatedAt    time.Time `gorm:"autoCreateTime;column:CreatedAt;not null"`
 	UpdatedAt    time.Time `gorm:"autoUpdateTime;column:UpdatedAt;not null"`
+
+	Department Departments `gorm:"foreignKey:DepartmentID;references:DepartmentId"`
+	UserRoles  []UserRoles `gorm:"foreignKey:UserId;references:UserID"`
 }
 
 func (Users) TableName() string {

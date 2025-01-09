@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	authRoutes "goGin/internal/auth/routes"
-	"goGin/internal/database"
-	"goGin/internal/middleware"
-	staticRoutes "goGin/internal/static/routes"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	authRoutes "goGin/internal/auth/routes"
+	"goGin/internal/database"
+	"goGin/internal/middleware"
+	staticRoutes "goGin/internal/static/routes"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -19,21 +20,19 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
 	gin.SetMode(os.Getenv("GIN_MODE"))
-	store := memory.NewStore()
 
+	store := memory.NewStore()
 	rate := limiter.Rate{
 		Limit:  5,
 		Period: time.Minute,
 	}
-
 	instance := limiter.New(store, rate)
+
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
@@ -57,7 +56,6 @@ func main() {
 			"City", "Region", "Country", "Loc", "Org", "Postal", "Timezone",
 		},
 	}
-
 	r.Use(cors.New(corsOptions))
 
 	r.Use(func(c *gin.Context) {
@@ -86,45 +84,39 @@ func main() {
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 	)
-
 	if err != nil {
 		log.Fatalf("Failed to connect to SQL Server: %v", err)
 	} else {
 		fmt.Println("SQL Server connected successfully")
 	}
-
 	defer func() {
 		sqlDB, err := sqlServer.DB()
-
 		if err != nil {
 			fmt.Println("Error retrieving SQL database instance:", err)
 			return
 		}
-
 		sqlDB.Close()
 	}()
 
-	redis, err := database.ConnectRedis(
-		os.Getenv("REDIS_HOST"),
-		os.Getenv("REDIS_PORT"),
-	)
-
+	redisClient, err := database.ConnectRedis(os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	} else {
 		fmt.Println("Redis connected successfully")
 	}
+	defer redisClient.Close()
 
-	defer redis.Close()
+	database.SetRedisClient(redisClient)
 
 	authRoutes.RegisterAuthRoutes(r)
 	staticRoutes.RegisterStaticRoutes(r)
-	port := os.Getenv("PORT")
 
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
+	// Start the server
 	fmt.Printf("Server is running on http://localhost:%s\n", port)
 	r.Run(":" + port)
 }
