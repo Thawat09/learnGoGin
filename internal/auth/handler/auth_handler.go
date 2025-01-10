@@ -1,13 +1,15 @@
 package handler
 
 import (
-	// "encoding/json"
+	// "fmt"
 	"goGin/internal/auth/service"
 	"goGin/internal/database"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	// jsoniter "github.com/json-iterator/go"
 
 	"github.com/gin-gonic/gin"
 )
@@ -70,6 +72,7 @@ func Login(c *gin.Context) {
 		DepartmentName: user.DepartmentName,
 	}
 
+	// var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	// jsonData, err := json.MarshalIndent(userClaims, "", "  ")
 	// if err != nil {
 	// 	fmt.Println("Error converting to JSON:", err)
@@ -124,20 +127,10 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	encryptedRefreshToken, err := service.Encrypt(refreshToken)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to encrypt access token",
-			"status": http.StatusInternalServerError,
-		})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "Login successful",
-		"accessToken":  encryptedAccessToken,
-		"refreshToken": encryptedRefreshToken,
-		"status":       http.StatusOK,
+		"message":     "Login successful",
+		"accessToken": encryptedAccessToken,
+		"status":      http.StatusOK,
 	})
 }
 
