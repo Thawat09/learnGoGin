@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterStaticRoutes(r *gin.Engine) {
+func RegisterStaticRoutes(r *gin.RouterGroup) {
 	static := r.Group("/static")
 	static.Use(middleware.AuthMiddleware())
 	{

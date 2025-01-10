@@ -126,10 +126,20 @@ func main() {
 
 	database.SetRedisClient(redisClient)
 
-	authRoutes.RegisterAuthRoutes(r)
-	chackRoutes.CheckRoutes(r)
-	tokenRoutes.TokenRoutes(r)
-	staticRoutes.RegisterStaticRoutes(r)
+	apiV1 := r.Group("/api/v1")
+	{
+		authRoutes.RegisterAuthRoutes(apiV1)
+		chackRoutes.CheckRoutes(apiV1)
+		tokenRoutes.TokenRoutes(apiV1)
+		staticRoutes.RegisterStaticRoutes(apiV1)
+	}
+
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":  "Endpoint not found",
+			"status": http.StatusNotFound,
+		})
+	})
 
 	port := os.Getenv("PORT")
 	if port == "" {

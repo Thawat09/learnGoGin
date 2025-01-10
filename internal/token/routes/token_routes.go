@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TokenRoutes(r *gin.Engine) {
+func TokenRoutes(r *gin.RouterGroup) {
 	token := r.Group("/token")
 	{
 		token.POST("/encrypt", middleware.TokenValidationMiddleware(), handler.EncryptMessage)

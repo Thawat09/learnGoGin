@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func CheckRoutes(r *gin.Engine) {
+func CheckRoutes(r *gin.RouterGroup) {
 	check := r.Group("/check")
 	{
 		check.GET("/health", handler.Health)
