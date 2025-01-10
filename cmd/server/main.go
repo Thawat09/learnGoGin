@@ -8,6 +8,7 @@ import (
 	"time"
 
 	authRoutes "goGin/internal/auth/routes"
+	chackRoutes "goGin/internal/check/routes"
 	"goGin/internal/database"
 	"goGin/internal/middleware"
 	staticRoutes "goGin/internal/static/routes"
@@ -125,6 +126,7 @@ func main() {
 	database.SetRedisClient(redisClient)
 
 	authRoutes.RegisterAuthRoutes(r)
+	chackRoutes.CheckRoutes(r)
 	staticRoutes.RegisterStaticRoutes(r)
 
 	port := os.Getenv("PORT")
