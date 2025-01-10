@@ -50,6 +50,7 @@ goGin/ # โฟลเดอร์หลักของโปรเจกต์
 9. get github.com/ulule/limiter/v3 # ติดตั้ง rate limit
 10. go get github.com/ulule/limiter/v3/drivers/store/memory # ติดตั้ง rate limit
 11. go get github.com/gin-contrib/cors # ติดตั้ง cors
+12. go get github.com/gin-contrib/gzip
 
 # Delete Dependencies # วิธีลบ dependencies ที่ไม่ใช้งานออกจาก go.mod
 1. go mod tidy # ลบ dependencies ที่ไม่ได้ใช้ออกจากโปรเจกต์

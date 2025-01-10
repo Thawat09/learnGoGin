@@ -13,6 +13,7 @@ import (
 	staticRoutes "goGin/internal/static/routes"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/ulule/limiter/v3"
@@ -34,6 +35,15 @@ func main() {
 	instance := limiter.New(store, rate)
 
 	r := gin.New()
+	r.Use(gzip.Gzip(gzip.DefaultCompression))
+
+	r.Use(func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=86400")
+		c.Header("Pragma", "cache")
+		c.Header("Expires", time.Now().Add(24*time.Hour).Format(time.RFC1123))
+		c.Next()
+	})
+
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Use(middleware.LoggingMiddleware())
@@ -123,5 +133,15 @@ func main() {
 	}
 
 	fmt.Printf("Server is running on http://localhost:%s\n", port)
-	r.Run(":" + port)
+
+	srv := &http.Server{
+		Addr:           ":" + port,
+		Handler:        r,
+		MaxHeaderBytes: 1 << 20,
+		IdleTimeout:    30 * time.Second,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatalf("Error starting server: %v", err)
+	}
 }
