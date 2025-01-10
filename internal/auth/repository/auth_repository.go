@@ -14,10 +14,10 @@ func FindUserByUsername(username string) (model.Users, error) {
 	var user model.Users
 
 	err := database.DB.
+		Select("UserId", "username", "password", "salt", "email", "FirstName", "LastName", "DepartmentId").
 		Where("username = ?", username).
 		Where("status = ?", "Active").
-		Joins("JOIN Departments ON Departments.DepartmentId = Users.DepartmentId").
-		Joins("JOIN UserRoles ON UserRoles.UserId = Users.UserId").
+		Preload("Department").
 		Preload("UserRoles.Role").
 		First(&user).Error
 

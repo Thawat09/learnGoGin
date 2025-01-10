@@ -42,10 +42,15 @@ func Login(username, password string, ipAddress string) (*Claims, error) {
 	}
 
 	go func() {
-		if err := repository.UpdateLastLogin(username); err != nil {
+		err := repository.UpdateLastLogin(username)
+		if err != nil {
 			log.Println("Failed to update last login:", err)
 		}
-		if err := repository.LogLoginHistory(user.UserID, ipAddress); err != nil {
+	}()
+
+	go func() {
+		err := repository.LogLoginHistory(user.UserID, ipAddress)
+		if err != nil {
 			log.Println("Failed to log login history:", err)
 		}
 	}()

@@ -14,8 +14,14 @@ import (
 func LoggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
+		ip := c.ClientIP()
 		status := c.Writer.Status()
-		fmt.Printf("Response Status: %d\n", status)
+
+		if ip == "::1" || ip == "" {
+			ip = "localhost"
+		}
+
+		fmt.Printf("Response Status: %d IP: %s\n", status, ip)
 	}
 }
 
