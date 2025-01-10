@@ -187,17 +187,20 @@ func CreateAccessToken(user *Claims) (string, error) {
 		return "", errors.New("missing SECRETTOKENKEY in environment variables")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
-		UserId:         user.UserId,
-		Username:       user.Username,
-		Email:          user.Email,
-		FirstName:      user.FirstName,
-		LastName:       user.LastName,
-		RoleId:         user.RoleId,
-		RoleName:       user.RoleName,
-		DepartmentId:   user.DepartmentId,
-		DepartmentName: user.DepartmentName,
-	})
+	claims := jwt.MapClaims{
+		"UserId":         user.UserId,
+		"Username":       user.Username,
+		"Email":          user.Email,
+		"FirstName":      user.FirstName,
+		"LastName":       user.LastName,
+		"RoleId":         user.RoleId,
+		"RoleName":       user.RoleName,
+		"DepartmentId":   user.DepartmentId,
+		"DepartmentName": user.DepartmentName,
+		"Exp":            time.Now().Add(1 * time.Hour).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString([]byte(secretKey))
 }
@@ -209,12 +212,66 @@ func CreateRefreshToken(user *Claims) (string, error) {
 		return "", errors.New("missing SECRETREFRESHTOKENKEY in environment variables")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userId":   user.UserId,
-		"username": user.Username,
-		"email":    user.Email,
-		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(),
-	})
+	claims := jwt.MapClaims{
+		"UserId":         user.UserId,
+		"Username":       user.Username,
+		"Email":          user.Email,
+		"FirstName":      user.FirstName,
+		"LastName":       user.LastName,
+		"RoleId":         user.RoleId,
+		"RoleName":       user.RoleName,
+		"DepartmentId":   user.DepartmentId,
+		"DepartmentName": user.DepartmentName,
+		"Exp":            time.Now().Add(8 * time.Hour).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString([]byte(secretKey))
+}
+
+func ParseToken(tokenString string) (*Claims, error) {
+	secretKey := os.Getenv("SECRETTOKENKEY")
+
+	if secretKey == "" {
+		return nil, errors.New("missing SECRETTOKENKEY in environment variables")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, errors.New("invalid claims")
+	}
+
+	return claims, nil
+}
+
+func ParseRefeshToken(tokenString string) (*Claims, error) {
+	secretKey := os.Getenv("SECRETREFRESHTOKENKEY")
+
+	if secretKey == "" {
+		return nil, errors.New("missing SECRETREFRESHTOKENKEY in environment variables")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid refresh token")
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, errors.New("invalid claims")
+	}
+
+	return claims, nil
 }
