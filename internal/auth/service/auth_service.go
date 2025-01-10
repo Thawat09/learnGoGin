@@ -130,7 +130,7 @@ func CreateAccessToken(user *Claims) (string, error) {
 		"RoleName":       user.RoleName,
 		"DepartmentId":   user.DepartmentId,
 		"DepartmentName": user.DepartmentName,
-		"Exp":            time.Now().Add(1 * time.Hour).Unix(),
+		"Exp":            time.Now().Add(1 * time.Hour).Unix(), // time.Now().Add(1 * time.Minute).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

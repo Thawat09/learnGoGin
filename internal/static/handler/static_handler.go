@@ -1,23 +1,18 @@
 package handler
 
 import (
+	"fmt"
 	"goGin/internal/static/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetUser(c *gin.Context) {
+func GetStatistics(c *gin.Context) {
 	userID := c.Param("id")
-	user, err := service.GetUserByID(userID)
+	user, _ := service.GetUserByID(userID)
 
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":  "User not found",
-			"status": http.StatusNotFound,
-		})
-		return
-	}
+	fmt.Println("User ID: ", userID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"user":   user,

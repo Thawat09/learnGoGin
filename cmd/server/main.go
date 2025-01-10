@@ -131,7 +131,7 @@ func main() {
 		authRoutes.RegisterAuthRoutes(apiV1)
 		chackRoutes.CheckRoutes(apiV1)
 		tokenRoutes.TokenRoutes(apiV1)
-		staticRoutes.RegisterStaticRoutes(apiV1)
+		staticRoutes.StaticRoutes(apiV1)
 	}
 
 	r.NoRoute(func(c *gin.Context) {
