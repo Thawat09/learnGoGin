@@ -33,6 +33,7 @@ func Health(c *gin.Context) {
 	}
 
 	responseTime := time.Since(startTime).Microseconds()
+	lastChecked := time.Now().Format("2006/01/02 15:04")
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  http.StatusOK,
@@ -43,6 +44,6 @@ func Health(c *gin.Context) {
 			"disk_usage":   fmt.Sprintf("%.2f%%", diskUsage.UsedPercent),
 		},
 		"response_time": fmt.Sprintf("%dµs", responseTime),
-		"last_checked":  time.Now().Format(time.RFC3339),
+		"last_checked":  lastChecked,
 	})
 }

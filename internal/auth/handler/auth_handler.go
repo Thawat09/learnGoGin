@@ -2,8 +2,9 @@ package handler
 
 import (
 	// "fmt"
-	"goGin/internal/auth/service"
+	authService "goGin/internal/auth/service"
 	"goGin/internal/database"
+	tokenService "goGin/internal/token/service"
 	"log"
 	"net/http"
 	"strconv"
@@ -28,7 +29,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	decryptedUsername, err := service.Decrypt(loginReq.Username)
+	decryptedUsername, err := tokenService.Decrypt(loginReq.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to decrypt username",
@@ -37,7 +38,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	decryptedPassword, err := service.Decrypt(loginReq.Password)
+	decryptedPassword, err := tokenService.Decrypt(loginReq.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to decrypt password",
@@ -51,7 +52,7 @@ func Login(c *gin.Context) {
 		ipAddress = "localhost"
 	}
 
-	user, err := service.Login(decryptedUsername, decryptedPassword, ipAddress)
+	user, err := authService.Login(decryptedUsername, decryptedPassword, ipAddress)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":  "Invalid credentials",
@@ -60,7 +61,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	userClaims := &service.Claims{
+	userClaims := &authService.Claims{
 		UserId:         user.UserId,
 		Username:       decryptedUsername,
 		Email:          user.Email,
@@ -81,7 +82,7 @@ func Login(c *gin.Context) {
 
 	// fmt.Println("JSON data:", string(jsonData))
 
-	accessToken, err := service.CreateAccessToken(userClaims)
+	accessToken, err := authService.CreateAccessToken(userClaims)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to generate access token",
@@ -90,7 +91,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	refreshToken, err := service.CreateRefreshToken(userClaims)
+	refreshToken, err := authService.CreateRefreshToken(userClaims)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to generate refresh token",
@@ -118,7 +119,16 @@ func Login(c *gin.Context) {
 		}
 	}()
 
-	encryptedAccessToken, err := service.Encrypt(accessToken)
+	encryptedAccessToken, err := tokenService.Encrypt(accessToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to encrypt access token",
+			"status": http.StatusInternalServerError,
+		})
+		return
+	}
+
+	encryptedRefreshToken, err := tokenService.Encrypt(refreshToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to encrypt access token",
@@ -128,9 +138,10 @@ func Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":     "Login successful",
-		"accessToken": encryptedAccessToken,
-		"status":      http.StatusOK,
+		"message":      "Login successful",
+		"accessToken":  encryptedAccessToken,
+		"refreshToken": encryptedRefreshToken,
+		"status":       http.StatusOK,
 	})
 }
 
@@ -158,7 +169,7 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	if err := service.Register(userReq.Username, userReq.Password, userReq.Email, userReq.DepartmentId); err != nil {
+	if err := authService.Register(userReq.Username, userReq.Password, userReq.Email, userReq.DepartmentId); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  "Failed to register",
 			"status": http.StatusInternalServerError,
@@ -170,174 +181,4 @@ func Register(c *gin.Context) {
 		"message": "User registered successfully",
 		"status":  http.StatusOK,
 	})
-}
-
-func EncryptMessage(c *gin.Context) {
-	var req struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":  "Invalid input",
-			"status": http.StatusBadRequest,
-		})
-		return
-	}
-
-	encryptedUsername, err := service.Encrypt(req.Username)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to encrypt username",
-			"status": http.StatusInternalServerError,
-		})
-		return
-	}
-
-	encryptedPassword, err := service.Encrypt(req.Password)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to encrypt password",
-			"status": http.StatusInternalServerError,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"encryptedUsername": encryptedUsername,
-		"encryptedPassword": encryptedPassword,
-		"status":            http.StatusOK,
-	})
-}
-
-func DecryptMessage(c *gin.Context) {
-	var req struct {
-		EncryptedData string `json:"data"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":  "Invalid input",
-			"status": http.StatusBadRequest,
-		})
-		return
-	}
-
-	decryptedData, err := service.Decrypt(req.EncryptedData)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to decrypt data",
-			"status": http.StatusInternalServerError,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"decryptedData": decryptedData,
-		"status":        http.StatusOK,
-	})
-}
-
-func DecryptToken(c *gin.Context) {
-	var req struct {
-		EncryptedToken string `json:"encryptedToken"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":  "Invalid input",
-			"status": http.StatusBadRequest,
-		})
-		return
-	}
-
-	decryptedToken, err := service.Decrypt(req.EncryptedToken)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to decrypt token",
-			"status": http.StatusInternalServerError,
-		})
-		return
-	}
-
-	claims, err := service.ParseToken(decryptedToken)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":  "Invalid or expired token",
-			"status": http.StatusUnauthorized,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"claims": claims,
-		"status": http.StatusOK,
-	})
-}
-
-func DecryptRefreshToken(c *gin.Context) {
-	var req struct {
-		EncryptedRefreshToken string `json:"encryptedRefreshToken"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":  "Invalid input",
-			"status": http.StatusBadRequest,
-		})
-		return
-	}
-
-	decryptedRefreshToken, err := service.Decrypt(req.EncryptedRefreshToken)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "Failed to decrypt refresh token",
-			"status": http.StatusInternalServerError,
-		})
-		return
-	}
-
-	claims, err := service.ParseRefeshToken(decryptedRefreshToken)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":  "Invalid or expired refresh token",
-			"status": http.StatusUnauthorized,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"claims": claims,
-		"status": http.StatusOK,
-	})
-}
-
-func DecryptTokenMiddleware(token string) (map[string]interface{}, error) {
-	decryptedToken, err := service.Decrypt(token)
-	if err != nil {
-		return nil, err
-	}
-
-	claims, err := service.ParseToken(decryptedToken)
-	if err != nil {
-		return nil, err
-	}
-
-	claimsMap := map[string]interface{}{
-		"userId":         claims.UserId,
-		"username":       claims.Username,
-		"email":          claims.Email,
-		"firstName":      claims.FirstName,
-		"lastName":       claims.LastName,
-		"roleId":         claims.RoleId,
-		"roleName":       claims.RoleName,
-		"departmentId":   claims.DepartmentId,
-		"departmentName": claims.DepartmentName,
-		"exp":            claims.ExpiresAt,
-	}
-
-	return claimsMap, nil
 }

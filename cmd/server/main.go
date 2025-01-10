@@ -12,6 +12,7 @@ import (
 	"goGin/internal/database"
 	"goGin/internal/middleware"
 	staticRoutes "goGin/internal/static/routes"
+	tokenRoutes "goGin/internal/token/routes"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
@@ -127,6 +128,7 @@ func main() {
 
 	authRoutes.RegisterAuthRoutes(r)
 	chackRoutes.CheckRoutes(r)
+	tokenRoutes.TokenRoutes(r)
 	staticRoutes.RegisterStaticRoutes(r)
 
 	port := os.Getenv("PORT")

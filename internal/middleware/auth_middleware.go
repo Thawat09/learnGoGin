@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"goGin/internal/auth/handler"
+	"goGin/internal/token/handler"
 	"net/http"
 	"strings"
 	"time"
