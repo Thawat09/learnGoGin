@@ -2,8 +2,8 @@ package repository
 
 import (
 	"errors"
-	"goGin/internal/database"
-	"goGin/internal/model"
+	"goGin/internal/config/database"
+	"goGin/internal/config/model"
 	"strings"
 	"time"
 

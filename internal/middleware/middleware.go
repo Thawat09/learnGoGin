@@ -2,12 +2,13 @@ package middleware
 
 import (
 	"fmt"
-	authService "goGin/internal/auth/service"
-	"goGin/internal/database"
-	"goGin/internal/token/handler"
+	authService "goGin/internal/api/auth/service"
+	"goGin/internal/api/token/handler"
+	"goGin/internal/config/database"
 
-	tokenService "goGin/internal/token/service"
+	tokenService "goGin/internal/api/token/service"
 	"net/http"
+
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +55,17 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		token := parts[1]
 
-		parsedToken, err := tokenService.ParseToken(token)
+		deToken, err := tokenService.Decrypt(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":  "Failed to decrypt data",
+				"status": http.StatusInternalServerError,
+			})
+			c.Abort()
+			return
+		}
+
+		parsedToken, err := tokenService.ParseTokenForExp(deToken)
 		if err != nil {
 			c.JSON(http.StatusForbidden, gin.H{
 				"error":  "Invalid Access Token",
@@ -64,89 +75,106 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		exp := parsedToken.ExpiresAt
+		redisClient := database.GetRedisClient()
 
-		expirationTime := time.Unix(exp.Unix(), 0)
-		if time.Now().After(expirationTime) {
-			redisClient := database.GetRedisClient()
-			accessTokenCacheKey := fmt.Sprintf("accessToken:%s", strconv.Itoa(int(parsedToken.UserId)))
-
-			cachedRefreshToken, err := database.GetValue(redisClient, fmt.Sprintf("refreshToken:%s", strconv.Itoa(int(parsedToken.UserId))))
-			if err != nil || cachedRefreshToken == "" {
-				c.JSON(http.StatusForbidden, gin.H{
-					"error":  "Refresh Token not found or expired",
-					"status": http.StatusForbidden,
-				})
-				c.Abort()
-				return
-			}
-
-			refreshParsedToken, err := jwt.Parse(cachedRefreshToken, nil)
-			if err != nil || !refreshParsedToken.Valid {
-				c.JSON(http.StatusForbidden, gin.H{
-					"error":  "Invalid Refresh Token",
-					"status": http.StatusForbidden,
-				})
-				c.Abort()
-				return
-			}
-
-			refreshClaims, ok := refreshParsedToken.Claims.(jwt.MapClaims)
-			if !ok || refreshClaims["exp"] == nil {
-				c.JSON(http.StatusForbidden, gin.H{
-					"error":  "Invalid Refresh Token Claims",
-					"status": http.StatusForbidden,
-				})
-				c.Abort()
-				return
-			}
-
-			refreshExp := int64(refreshClaims["exp"].(float64))
-			refreshExpirationTime := time.Unix(refreshExp, 0)
-			if time.Now().After(refreshExpirationTime) {
-				c.JSON(http.StatusForbidden, gin.H{
-					"error":  "Refresh Token has expired",
-					"status": http.StatusForbidden,
-				})
-				c.Abort()
-				return
-			}
-
-			serviceClaims := &authService.Claims{
-				UserId:         int(refreshClaims["UserId"].(float64)),
-				Username:       refreshClaims["Username"].(string),
-				Email:          refreshClaims["Email"].(string),
-				FirstName:      refreshClaims["FirstName"].(string),
-				LastName:       refreshClaims["LastName"].(string),
-				RoleId:         int(refreshClaims["RoleId"].(float64)),
-				RoleName:       refreshClaims["RoleName"].(string),
-				DepartmentId:   int(refreshClaims["DepartmentId"].(float64)),
-				DepartmentName: refreshClaims["DepartmentName"].(string),
-			}
-
-			newAccessToken, err := authService.CreateAccessToken(serviceClaims)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error":  "Failed to create new access token",
-					"status": http.StatusInternalServerError,
-				})
-				c.Abort()
-				return
-			}
-
-			database.SetValue(redisClient, fmt.Sprintf("accessToken:%s", newAccessToken), newAccessToken, 3600)
-			database.SetValue(redisClient, accessTokenCacheKey, newAccessToken, 900)
-
-			c.Set("user", serviceClaims)
-			c.Set("newAccessToken", newAccessToken)
-
-			c.Next()
+		userId, ok := parsedToken["UserId"].(float64)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":  "Invalid UserId in token",
+				"status": http.StatusForbidden,
+			})
+			c.Abort()
 			return
 		}
 
-		redisClient := database.GetRedisClient()
-		accessTokenCacheKey := fmt.Sprintf("accessToken:%s", strconv.Itoa(int(parsedToken.UserId)))
-		database.SetValue(redisClient, accessTokenCacheKey, token, 900)
+		cachedAccessToken, err := database.GetValue(redisClient, fmt.Sprintf("accessToken:%s", strconv.Itoa(int(userId))))
+		if err != nil || cachedAccessToken == "" {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":  "Access Token not found or expired",
+				"status": http.StatusForbidden,
+			})
+			c.Abort()
+			return
+		}
+
+		cachedRefreshToken, err := database.GetValue(redisClient, fmt.Sprintf("refreshToken:%s", strconv.Itoa(int(userId))))
+		if err != nil || cachedRefreshToken == "" {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":  "Refresh Token not found or expired",
+				"status": http.StatusForbidden,
+			})
+			c.Abort()
+			return
+		}
+
+		refreshParsedToken, err := tokenService.ParseRefeshToken(cachedRefreshToken)
+		if err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":  "Invalid Refresh Token",
+				"status": http.StatusForbidden,
+			})
+			c.Abort()
+			return
+		}
+
+		refreshExp := refreshParsedToken.ExpiresAt
+		refreshExpirationTime := time.Unix(refreshExp.Unix(), 0)
+		if time.Now().After(refreshExpirationTime) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":  "Refresh Token has expired",
+				"status": http.StatusForbidden,
+			})
+			c.Abort()
+			return
+		} else {
+			exp, _ := parsedToken["Exp"].(float64)
+			expirationTime := time.Unix(int64(exp), 0)
+			if time.Now().After(expirationTime) {
+				serviceClaims := &authService.Claims{
+					UserId:         refreshParsedToken.UserId,
+					Username:       refreshParsedToken.Username,
+					Email:          refreshParsedToken.Email,
+					FirstName:      refreshParsedToken.FirstName,
+					LastName:       refreshParsedToken.LastName,
+					RoleId:         refreshParsedToken.RoleId,
+					RoleName:       refreshParsedToken.RoleName,
+					DepartmentId:   refreshParsedToken.DepartmentId,
+					DepartmentName: refreshParsedToken.DepartmentName,
+				}
+
+				newAccessToken, err := authService.CreateAccessToken(serviceClaims)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"error":  "Failed to create new access token",
+						"status": http.StatusInternalServerError,
+					})
+					c.Abort()
+					return
+				}
+
+				database.SetValue(redisClient, fmt.Sprintf("accessToken:%s", newAccessToken), newAccessToken, 3600)
+
+				encryptedAccessToken, err := tokenService.Encrypt(newAccessToken)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"error":  "Failed to encrypt access token",
+						"status": http.StatusInternalServerError,
+					})
+					return
+				}
+
+				c.JSON(http.StatusOK, gin.H{
+					"accessToken": encryptedAccessToken,
+					"status":      http.StatusOK,
+				})
+
+				c.Set("user", serviceClaims)
+				c.Set("newAccessToken", newAccessToken)
+
+				c.Abort()
+				return
+			}
+		}
 
 		c.Set("user", parsedToken)
 		c.Next()

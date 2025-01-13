@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"goGin/internal/auth/handler"
+	"goGin/internal/api/auth/handler"
 
 	"github.com/gin-gonic/gin"
 )

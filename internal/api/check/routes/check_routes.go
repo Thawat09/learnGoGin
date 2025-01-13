@@ -1,7 +1,7 @@
 package health
 
 import (
-	"goGin/internal/check/handler"
+	"goGin/internal/api/check/handler"
 
 	"github.com/gin-gonic/gin"
 )

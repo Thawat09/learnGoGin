@@ -2,9 +2,9 @@ package handler
 
 import (
 	// "fmt"
-	authService "goGin/internal/auth/service"
-	"goGin/internal/database"
-	tokenService "goGin/internal/token/service"
+	authService "goGin/internal/api/auth/service"
+	tokenService "goGin/internal/api/token/service"
+	"goGin/internal/config/database"
 	"log"
 	"net/http"
 	"strconv"

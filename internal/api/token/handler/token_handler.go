@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"goGin/internal/token/service"
+	"goGin/internal/api/token/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

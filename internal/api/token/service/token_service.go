@@ -137,3 +137,26 @@ func ParseRefeshToken(tokenString string) (*Claims, error) {
 
 	return claims, nil
 }
+
+func ParseTokenForExp(tokenString string) (jwt.MapClaims, error) {
+	secretKey := os.Getenv("SECRETTOKENKEY")
+
+	if secretKey == "" {
+		return nil, errors.New("missing SECRETTOKENKEY in environment variables")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("invalid claims")
+	}
+
+	return claims, nil
+}

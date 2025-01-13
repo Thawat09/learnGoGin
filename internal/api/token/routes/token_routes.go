@@ -1,7 +1,7 @@
 package token
 
 import (
-	"goGin/internal/token/handler"
+	"goGin/internal/api/token/handler"
 	"goGin/internal/middleware"
 
 	"github.com/gin-gonic/gin"

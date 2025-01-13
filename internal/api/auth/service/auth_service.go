@@ -2,9 +2,9 @@ package service
 
 import (
 	"errors"
-	"goGin/internal/auth/repository"
-	"goGin/internal/database"
-	"goGin/internal/model"
+	"goGin/internal/api/auth/repository"
+	"goGin/internal/config/database"
+	"goGin/internal/config/model"
 	"log"
 	"os"
 	"time"
@@ -130,7 +130,7 @@ func CreateAccessToken(user *Claims) (string, error) {
 		"RoleName":       user.RoleName,
 		"DepartmentId":   user.DepartmentId,
 		"DepartmentName": user.DepartmentName,
-		"Exp":            time.Now().Add(1 * time.Hour).Unix(), // time.Now().Add(1 * time.Minute).Unix(),
+		"Exp":            time.Now().Add(1 * time.Minute).Unix(), // time.Now().Add(1 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -155,7 +155,7 @@ func CreateRefreshToken(user *Claims) (string, error) {
 		"RoleName":       user.RoleName,
 		"DepartmentId":   user.DepartmentId,
 		"DepartmentName": user.DepartmentName,
-		"Exp":            time.Now().Add(8 * time.Hour).Unix(),
+		"Exp":            time.Now().Add(3 * time.Minute).Unix(), // time.Now().Add(8 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

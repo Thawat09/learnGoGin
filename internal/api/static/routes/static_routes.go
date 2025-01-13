@@ -1,15 +1,15 @@
 package routes
 
 import (
-	// "goGin/internal/middleware"
-	"goGin/internal/static/handler"
+	"goGin/internal/middleware"
+	"goGin/internal/api/static/handler"
 
 	"github.com/gin-gonic/gin"
 )
 
 func StaticRoutes(r *gin.RouterGroup) {
 	static := r.Group("/static")
-	// static.Use(middleware.AuthMiddleware())
+	static.Use(middleware.AuthMiddleware())
 	{
 		static.GET("/data", handler.GetStatistics)
 	}

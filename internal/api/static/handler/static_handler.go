@@ -2,7 +2,7 @@ package handler
 
 import (
 	"fmt"
-	"goGin/internal/static/service"
+	"goGin/internal/api/static/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

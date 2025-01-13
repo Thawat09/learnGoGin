@@ -7,12 +7,12 @@ import (
 	"os"
 	"time"
 
-	authRoutes "goGin/internal/auth/routes"
-	chackRoutes "goGin/internal/check/routes"
-	"goGin/internal/database"
+	authRoutes "goGin/internal/api/auth/routes"
+	chackRoutes "goGin/internal/api/check/routes"
+	"goGin/internal/config/database"
 	"goGin/internal/middleware"
-	staticRoutes "goGin/internal/static/routes"
-	tokenRoutes "goGin/internal/token/routes"
+	staticRoutes "goGin/internal/api/static/routes"
+	tokenRoutes "goGin/internal/api/token/routes"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
