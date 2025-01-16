@@ -9,10 +9,10 @@ import (
 
 	authRoutes "goGin/internal/api/auth/routes"
 	chackRoutes "goGin/internal/api/check/routes"
-	"goGin/internal/config/database"
-	"goGin/internal/middleware"
 	staticRoutes "goGin/internal/api/static/routes"
 	tokenRoutes "goGin/internal/api/token/routes"
+	"goGin/internal/config/database"
+	"goGin/internal/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"

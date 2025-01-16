@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"goGin/internal/middleware"
 	"goGin/internal/api/static/handler"
+	"goGin/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
