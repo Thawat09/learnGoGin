@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/joho/godotenv v1.5.1
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/redis/go-redis/v9 v9.7.3
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/crypto v0.35.0
